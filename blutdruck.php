@@ -53,6 +53,7 @@ function badgeClass(int $systole, int $diastole): string
 }
 
 $error = '';
+$anzeigeLimit = 500; // max. Werte in Tabelle und Diagramm (Export ist unbegrenzt)
 $editId = (int)($_GET['edit'] ?? 0);
 
 $von = trim((string)($_GET['von'] ?? ''));
@@ -184,31 +185,21 @@ if ($bis !== '') {
 
 $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-$stmt = $pdo->prepare("
-    SELECT
-        id,
-        messdatum,
-        systole,
-        diastole,
-        puls,
-        bemerkung,
-        created_at,
-        updated_at
-    FROM blutdruck
-    $whereSql
-    ORDER BY messdatum DESC, id DESC
-    LIMIT 500
-");
-$stmt->execute($params);
-$werte = $stmt->fetchAll();
+$export = (string)($_GET['export'] ?? '');
 
-$jahrOptions = $pdo->query("SELECT DISTINCT YEAR(messdatum) AS y FROM blutdruck ORDER BY y DESC")->fetchAll(PDO::FETCH_COLUMN);
-
-if (!$jahrOptions) {
-    $jahrOptions = range((int)date('Y'), 2016);
+if ($export === 'csv' || $export === 'excel') {
+    // Export ohne LIMIT: alle Werte im gewählten Zeitraum, chronologisch
+    $stmt = $pdo->prepare("
+        SELECT messdatum, systole, diastole, puls, bemerkung
+        FROM blutdruck
+        $whereSql
+        ORDER BY messdatum ASC, id ASC
+    ");
+    $stmt->execute($params);
+    $exportRows = $stmt->fetchAll();
 }
 
-if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+if ($export === 'csv') {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="blutdruck_export.csv"');
 
@@ -217,7 +208,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
 
     fputcsv($out, ['Datum/Uhrzeit', 'Systole', 'Diastole', 'Puls', 'Bemerkung'], ';');
 
-    foreach (array_reverse($werte) as $row) {
+    foreach ($exportRows as $row) {
         fputcsv($out, [
             fmtDateTime($row['messdatum']),
             $row['systole'],
@@ -231,14 +222,14 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     exit;
 }
 
-if (isset($_GET['export']) && $_GET['export'] === 'excel') {
+if ($export === 'excel') {
     header('Content-Type: application/vnd.ms-excel; charset=utf-8');
     header('Content-Disposition: attachment; filename="blutdruck_export.xls"');
 
     echo "<table border='1'>";
     echo "<tr><th>Datum/Uhrzeit</th><th>Systole</th><th>Diastole</th><th>Puls</th><th>Bemerkung</th></tr>";
 
-    foreach (array_reverse($werte) as $row) {
+    foreach ($exportRows as $row) {
         echo '<tr>';
         echo '<td>' . h(fmtDateTime($row['messdatum'])) . '</td>';
         echo '<td>' . h($row['systole']) . '</td>';
@@ -250,6 +241,38 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
 
     echo '</table>';
     exit;
+}
+
+$stmt = $pdo->prepare("
+    SELECT
+        id,
+        messdatum,
+        systole,
+        diastole,
+        puls,
+        bemerkung,
+        created_at,
+        updated_at
+    FROM blutdruck
+    $whereSql
+    ORDER BY messdatum DESC, id DESC
+    LIMIT $anzeigeLimit
+");
+$stmt->execute($params);
+$werte = $stmt->fetchAll();
+
+$gesamtAnzahl = count($werte);
+
+if ($gesamtAnzahl >= $anzeigeLimit) {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM blutdruck $whereSql");
+    $stmt->execute($params);
+    $gesamtAnzahl = (int)$stmt->fetchColumn();
+}
+
+$jahrOptions = $pdo->query("SELECT DISTINCT YEAR(messdatum) AS y FROM blutdruck ORDER BY y DESC")->fetchAll(PDO::FETCH_COLUMN);
+
+if (!$jahrOptions) {
+    $jahrOptions = range((int)date('Y'), 2016);
 }
 
 $chartRows = array_reverse($werte);
@@ -538,6 +561,14 @@ $xlsUrl = 'blutdruck.php?' . http_build_query(array_merge($queryParams, ['export
             </div>
         </div>
     </div>
+
+    <?php if ($gesamtAnzahl > count($werte)): ?>
+        <div class="alert alert-info py-2">
+            Angezeigt werden die neuesten <?= h(count($werte)) ?> von <?= h($gesamtAnzahl) ?> Messwerten
+            im gewählten Zeitraum. Für ältere Werte den Zeitraum eingrenzen –
+            CSV und Excel enthalten immer alle Werte.
+        </div>
+    <?php endif; ?>
 
     <div class="card shadow-sm mb-3">
         <div class="card-body">
