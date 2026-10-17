@@ -184,6 +184,64 @@ if ($bis !== '') {
 
 $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
+$export = (string)($_GET['export'] ?? '');
+
+if ($export === 'csv' || $export === 'excel') {
+    // Export ohne LIMIT: alle Werte im gewählten Zeitraum, chronologisch
+    $stmt = $pdo->prepare("
+        SELECT messdatum, systole, diastole, puls, bemerkung
+        FROM blutdruck
+        $whereSql
+        ORDER BY messdatum ASC, id ASC
+    ");
+    $stmt->execute($params);
+    $exportRows = $stmt->fetchAll();
+}
+
+if ($export === 'csv') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="blutdruck_export.csv"');
+
+    $out = fopen('php://output', 'w');
+    fprintf($out, "\xEF\xBB\xBF");
+
+    fputcsv($out, ['Datum/Uhrzeit', 'Systole', 'Diastole', 'Puls', 'Bemerkung'], ';');
+
+    foreach ($exportRows as $row) {
+        fputcsv($out, [
+            fmtDateTime($row['messdatum']),
+            $row['systole'],
+            $row['diastole'],
+            $row['puls'],
+            $row['bemerkung'] ?? '',
+        ], ';');
+    }
+
+    fclose($out);
+    exit;
+}
+
+if ($export === 'excel') {
+    header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+    header('Content-Disposition: attachment; filename="blutdruck_export.xls"');
+
+    echo "<table border='1'>";
+    echo "<tr><th>Datum/Uhrzeit</th><th>Systole</th><th>Diastole</th><th>Puls</th><th>Bemerkung</th></tr>";
+
+    foreach ($exportRows as $row) {
+        echo '<tr>';
+        echo '<td>' . h(fmtDateTime($row['messdatum'])) . '</td>';
+        echo '<td>' . h($row['systole']) . '</td>';
+        echo '<td>' . h($row['diastole']) . '</td>';
+        echo '<td>' . h($row['puls']) . '</td>';
+        echo '<td>' . h($row['bemerkung'] ?? '') . '</td>';
+        echo '</tr>';
+    }
+
+    echo '</table>';
+    exit;
+}
+
 $stmt = $pdo->prepare("
     SELECT
         id,
@@ -206,50 +264,6 @@ $jahrOptions = $pdo->query("SELECT DISTINCT YEAR(messdatum) AS y FROM blutdruck 
 
 if (!$jahrOptions) {
     $jahrOptions = range((int)date('Y'), 2016);
-}
-
-if (isset($_GET['export']) && $_GET['export'] === 'csv') {
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="blutdruck_export.csv"');
-
-    $out = fopen('php://output', 'w');
-    fprintf($out, "\xEF\xBB\xBF");
-
-    fputcsv($out, ['Datum/Uhrzeit', 'Systole', 'Diastole', 'Puls', 'Bemerkung'], ';');
-
-    foreach (array_reverse($werte) as $row) {
-        fputcsv($out, [
-            fmtDateTime($row['messdatum']),
-            $row['systole'],
-            $row['diastole'],
-            $row['puls'],
-            $row['bemerkung'] ?? '',
-        ], ';');
-    }
-
-    fclose($out);
-    exit;
-}
-
-if (isset($_GET['export']) && $_GET['export'] === 'excel') {
-    header('Content-Type: application/vnd.ms-excel; charset=utf-8');
-    header('Content-Disposition: attachment; filename="blutdruck_export.xls"');
-
-    echo "<table border='1'>";
-    echo "<tr><th>Datum/Uhrzeit</th><th>Systole</th><th>Diastole</th><th>Puls</th><th>Bemerkung</th></tr>";
-
-    foreach (array_reverse($werte) as $row) {
-        echo '<tr>';
-        echo '<td>' . h(fmtDateTime($row['messdatum'])) . '</td>';
-        echo '<td>' . h($row['systole']) . '</td>';
-        echo '<td>' . h($row['diastole']) . '</td>';
-        echo '<td>' . h($row['puls']) . '</td>';
-        echo '<td>' . h($row['bemerkung'] ?? '') . '</td>';
-        echo '</tr>';
-    }
-
-    echo '</table>';
-    exit;
 }
 
 $chartRows = array_reverse($werte);

@@ -190,6 +190,7 @@ Liniendiagramm mit Chart.js, chronologisch aufsteigend:
 | Excel | `blutdruck_export.xls` | HTML-Tabelle mit Excel-MIME-Typ; Excel zeigt beim Öffnen eine Formatwarnung |
 
 Spalten: Datum/Uhrzeit, Systole, Diastole, Puls, Bemerkung – chronologisch aufsteigend.
+Der Export enthält **alle** Werte im gewählten Zeitraum; das `LIMIT 500` der Bildschirmansicht gilt hier nicht.
 
 ### 7.8 Hilfsfunktionen
 
@@ -208,7 +209,7 @@ Spalten: Datum/Uhrzeit, Systole, Diastole, Puls, Bemerkung – chronologisch auf
 | 1 | Kein Login in der Anwendung | Wer die URL kennt, sieht und ändert Gesundheitsdaten | Verzeichnisschutz (`.htaccess`/cPanel „Directory Privacy“) oder Login |
 | 2 | Kein CSRF-Schutz bei Speichern/Löschen | Fremde Seite könnte Aktionen auslösen, wenn man angemeldet ist | CSRF-Token in Formularen |
 | 3 | `display_errors = 1` | Fehlermeldungen mit Pfaden/SQL im Browser sichtbar | Im Produktivbetrieb abschalten |
-| 4 | `LIMIT 500` | Bei vielen Messungen fehlen ältere Werte in Tabelle, Diagramm **und Export**, ohne Hinweis | Limit nur für die Tabelle, Export ohne Limit, oder Hinweis anzeigen |
+| 4 | `LIMIT 500` | Bei vielen Messungen fehlen ältere Werte in Tabelle und Diagramm, ohne Hinweis (der Export ist nicht betroffen) | Hinweis anzeigen oder Seitenaufteilung |
 | 5 | Chart.js ohne feste Version (`cdn.jsdelivr.net/npm/chart.js`) | Neue Hauptversion kann das Diagramm unbemerkt brechen | Version festlegen, z. B. `chart.js@4.4.1` |
 | 6 | Wertebereiche nur im Browser geprüft | Unplausible Werte über direkte Requests möglich | Bereiche auch serverseitig prüfen |
 | 7 | Unterschiedliche Bootstrap-Versionen (Dashboard 5.3.2, Blutdruck 5.3.3) | Kosmetisch | Vereinheitlichen |
