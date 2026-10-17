@@ -53,6 +53,7 @@ function badgeClass(int $systole, int $diastole): string
 }
 
 $error = '';
+$anzeigeLimit = 500; // max. Werte in Tabelle und Diagramm (Export ist unbegrenzt)
 $editId = (int)($_GET['edit'] ?? 0);
 
 $von = trim((string)($_GET['von'] ?? ''));
@@ -255,10 +256,18 @@ $stmt = $pdo->prepare("
     FROM blutdruck
     $whereSql
     ORDER BY messdatum DESC, id DESC
-    LIMIT 500
+    LIMIT $anzeigeLimit
 ");
 $stmt->execute($params);
 $werte = $stmt->fetchAll();
+
+$gesamtAnzahl = count($werte);
+
+if ($gesamtAnzahl >= $anzeigeLimit) {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM blutdruck $whereSql");
+    $stmt->execute($params);
+    $gesamtAnzahl = (int)$stmt->fetchColumn();
+}
 
 $jahrOptions = $pdo->query("SELECT DISTINCT YEAR(messdatum) AS y FROM blutdruck ORDER BY y DESC")->fetchAll(PDO::FETCH_COLUMN);
 
@@ -552,6 +561,14 @@ $xlsUrl = 'blutdruck.php?' . http_build_query(array_merge($queryParams, ['export
             </div>
         </div>
     </div>
+
+    <?php if ($gesamtAnzahl > count($werte)): ?>
+        <div class="alert alert-info py-2">
+            Angezeigt werden die neuesten <?= h(count($werte)) ?> von <?= h($gesamtAnzahl) ?> Messwerten
+            im gewählten Zeitraum. Für ältere Werte den Zeitraum eingrenzen –
+            CSV und Excel enthalten immer alle Werte.
+        </div>
+    <?php endif; ?>
 
     <div class="card shadow-sm mb-3">
         <div class="card-body">

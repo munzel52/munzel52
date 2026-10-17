@@ -134,6 +134,9 @@ CREATE TABLE blutdruck (
    Schnellwahl *Letzter Monat*, *Zurücksetzen* stellt den Standardzeitraum wieder her.
 5. **Export:** *CSV* oder *Excel* exportiert die aktuell gefilterten Werte.
 
+Tabelle und Diagramm zeigen höchstens die neuesten 500 Werte (`$anzeigeLimit`). Liegen im Zeitraum
+mehr Werte, erscheint oberhalb des Diagramms ein Hinweis mit der Gesamtzahl.
+
 Auf Bildschirmen unter 768 px wird statt der Tabelle eine Kartenansicht mit farbigen Badges
 gezeigt.
 
@@ -209,7 +212,7 @@ Der Export enthält **alle** Werte im gewählten Zeitraum; das `LIMIT 500` der B
 | 1 | Kein Login in der Anwendung | Wer die URL kennt, sieht und ändert Gesundheitsdaten | Verzeichnisschutz (`.htaccess`/cPanel „Directory Privacy“) oder Login |
 | 2 | Kein CSRF-Schutz bei Speichern/Löschen | Fremde Seite könnte Aktionen auslösen, wenn man angemeldet ist | CSRF-Token in Formularen |
 | 3 | `display_errors = 1` | Fehlermeldungen mit Pfaden/SQL im Browser sichtbar | Im Produktivbetrieb abschalten |
-| 4 | `LIMIT 500` | Bei vielen Messungen fehlen ältere Werte in Tabelle und Diagramm, ohne Hinweis (der Export ist nicht betroffen) | Hinweis anzeigen oder Seitenaufteilung |
+| 4 | `LIMIT 500` (`$anzeigeLimit`) | Tabelle und Diagramm zeigen höchstens die neuesten 500 Werte; darüber erscheint ein Hinweis „neueste 500 von N“. Der Export ist nicht betroffen | Bei Bedarf Seitenaufteilung |
 | 5 | Chart.js ohne feste Version (`cdn.jsdelivr.net/npm/chart.js`) | Neue Hauptversion kann das Diagramm unbemerkt brechen | Version festlegen, z. B. `chart.js@4.4.1` |
 | 6 | Wertebereiche nur im Browser geprüft | Unplausible Werte über direkte Requests möglich | Bereiche auch serverseitig prüfen |
 | 7 | Unterschiedliche Bootstrap-Versionen (Dashboard 5.3.2, Blutdruck 5.3.3) | Kosmetisch | Vereinheitlichen |
